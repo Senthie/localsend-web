@@ -38,11 +38,37 @@ const cryptoParams = {
 let selectedParams: CryptoParams = cryptoParams.rsaPss
 
 export function isWebCryptoSupported(): boolean {
-  return (
+  // 在开发环境中，如果是非安全上下文但有crypto对象，仍然尝试使用
+  const hasWebCrypto =
     window.crypto &&
     window.crypto.subtle &&
     "generateKey" in window.crypto.subtle
-  )
+
+  // 检查是否为安全上下文
+  const isSecureContext =
+    window.isSecureContext ||
+    location.protocol === "https:" ||
+    location.hostname === "localhost" ||
+    location.hostname === "127.0.0.1"
+
+  // 开发环境检查：如果URL包含开发端口或者是本地IP
+  const isDevelopment =
+    import.meta.dev ||
+    location.port === "3000" ||
+    /^192\.168\./.test(location.hostname) ||
+    /^10\./.test(location.hostname) ||
+    /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(location.hostname) ||
+    /^14\.12\.0\.172$/.test(location.hostname) ||
+    location.hostname === "0.0.0.0"
+
+  if (isDevelopment && hasWebCrypto) {
+    console.warn(
+      "Running in development mode with potentially insecure context, but Web Crypto API is available"
+    )
+    return true
+  }
+
+  return hasWebCrypto && isSecureContext
 }
 
 export async function upgradeToEd25519IfSupported(): Promise<void> {
@@ -86,9 +112,15 @@ export async function cryptoKeyToPem(cryptoKey: CryptoKey): Promise<string> {
 }
 
 export async function publicKeyFromDer(der: Uint8Array): Promise<CryptoKey> {
+  // 确保der是正确的ArrayBuffer格式
+  const buffer =
+    der.buffer instanceof ArrayBuffer
+      ? der.buffer.slice(der.byteOffset, der.byteOffset + der.byteLength)
+      : new Uint8Array(der).buffer
+
   return await window.crypto.subtle.importKey(
     "spki",
-    der,
+    buffer,
     selectedParams.import,
     true,
     ["verify"]
@@ -138,7 +170,17 @@ export async function generateClientTokenFromNonce(
     await window.crypto.subtle.exportKey("spki", key.publicKey)
   )
   const hashInput = concatBytes(publicKeyDER, nonce)
-  const digest = await window.crypto.subtle.digest("SHA-256", hashInput)
+
+  // 确保hashInput是正确的ArrayBuffer格式
+  const hashInputBuffer =
+    hashInput.buffer instanceof ArrayBuffer
+      ? hashInput.buffer.slice(
+          hashInput.byteOffset,
+          hashInput.byteOffset + hashInput.byteLength
+        )
+      : new Uint8Array(hashInput).buffer
+
+  const digest = await window.crypto.subtle.digest("SHA-256", hashInputBuffer)
   const signature = await window.crypto.subtle.sign(
     selectedParams.sign,
     key.privateKey,
@@ -191,8 +233,17 @@ export async function verifyToken(
   const publicKeyDER = await crypto.subtle.exportKey("spki", publicKey)
   const hashInput = concatBytes(new Uint8Array(publicKeyDER), saltBuffer)
 
+  // 确保hashInput是正确的ArrayBuffer格式
+  const hashInputBuffer =
+    hashInput.buffer instanceof ArrayBuffer
+      ? hashInput.buffer.slice(
+          hashInput.byteOffset,
+          hashInput.byteOffset + hashInput.byteLength
+        )
+      : new Uint8Array(hashInput).buffer
+
   // Recompute the SHA-256 hash
-  const digest = await crypto.subtle.digest("SHA-256", hashInput)
+  const digest = await crypto.subtle.digest("SHA-256", hashInputBuffer)
   const recomputedHashB64 = encodeBase64(new Uint8Array(digest))
 
   if (recomputedHashB64 !== hashB64) {
@@ -200,10 +251,20 @@ export async function verifyToken(
   }
 
   const signatureBuffer = decodeBase64(signB64)
+
+  // 确保signatureBuffer是正确的ArrayBuffer格式
+  const signatureArrayBuffer =
+    signatureBuffer.buffer instanceof ArrayBuffer
+      ? signatureBuffer.buffer.slice(
+          signatureBuffer.byteOffset,
+          signatureBuffer.byteOffset + signatureBuffer.byteLength
+        )
+      : new Uint8Array(signatureBuffer).buffer
+
   return await crypto.subtle.verify(
     selectedParams.sign,
     publicKey,
-    signatureBuffer,
+    signatureArrayBuffer,
     digest
   )
 }
@@ -237,8 +298,15 @@ function concatBytes(...arrays: Uint8Array[]): Uint8Array {
 }
 
 function typedArrayToBuffer(array: Uint8Array): ArrayBuffer {
-  return array.buffer.slice(
-    array.byteOffset,
-    array.byteLength + array.byteOffset
-  )
+  if (array.buffer instanceof ArrayBuffer) {
+    return array.buffer.slice(
+      array.byteOffset,
+      array.byteLength + array.byteOffset
+    )
+  }
+  // 如果不是ArrayBuffer，创建一个新的ArrayBuffer
+  const buffer = new ArrayBuffer(array.length)
+  const view = new Uint8Array(buffer)
+  view.set(array)
+  return buffer
 }

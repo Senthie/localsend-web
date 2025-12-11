@@ -6,7 +6,7 @@
     "format": "prettier --write .",
     "build": "nuxt build",
     "test": "vitest",
-    "dev": "nuxt dev",
+    "dev": "nuxt dev --host 0.0.0.0",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare"
