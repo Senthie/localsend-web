@@ -8,7 +8,7 @@
 
    将你的SSL证书文件放在 `ssl/` 目录下：
 
-   ```
+   ```sh
    ssl/
    ├── cert.pem    # SSL证书文件
    └── key.pem     # 私钥文件
@@ -17,7 +17,7 @@
    如果只是测试，可以生成自签名证书：
 
    ```bash
-   # Linux/Mac
+   # Linux/Macsh
    ./generate-test-cert.sh
    
    # Windows
@@ -42,23 +42,23 @@
    NODE_ENV=production
    ```
 
-2. **构建并启动服务**
+3. **构建并启动服务**
 
    ```bash
    docker-compose up -d --build
    ```
 
-3. **访问应用**
+4. **访问应用**
    - HTTP：<http://localhost> （自动重定向到HTTPS）
    - HTTPS：<https://localhost> 或 <https://your-domain.com>
 
-4. **查看日志**
+5. **查看日志**
 
    ```bash
    docker-compose logs -f
    ```
 
-5. **停止服务**
+6. **停止服务**
 
    ```bash
    docker-compose down
@@ -80,16 +80,62 @@
 
 ### 方法三：直接使用 Docker
 
-1. **构建镜像**
+#### 选项A：使用自动化脚本（推荐）
+
+**运行自动化脚本**
+
+```bash
+# Linux/Mac
+chmod +x run-docker.sh
+./run-docker.sh
+
+# Windows
+run-docker.bat
+```
+
+脚本会自动检查SSL证书、构建镜像并运行容器。
+
+#### 选项B：手动执行命令
+
+1. **准备SSL证书和环境变量**
+
+   确保已准备好SSL证书文件和.env文件（参考方法一的步骤1-2）
+
+2. **构建镜像**
 
    ```bash
-   docker build -t nuxt-app .
+   docker build -t localsent-web-app .
    ```
 
-2. **运行容器**
+3. **运行容器**
 
    ```bash
-   docker run -d -p 80:80 --name nuxt-app nuxt-app
+   # 基本运行（映射80和443端口，挂载SSL证书）
+   docker run -d \
+     -p 80:80 \
+     -p 443:443 \
+     -v $(pwd)/ssl:/etc/ssl/certs:ro \
+     --env-file .env \
+     --name localsent-web \
+     localsent-web-app
+   ```
+
+   或者使用单行命令：
+
+   ```bash
+   docker run -d -p 80:80 -p 443:443 -v $(pwd)/ssl:/etc/ssl/certs:ro --env-file .env --name localsent-web localsent-web-app
+   ```
+
+   **Windows PowerShell用户请使用：**
+
+   ```powershell
+   docker run -d -p 80:80 -p 443:443 -v ${PWD}/ssl:/etc/ssl/certs:ro --env-file .env --name localsent-web localsent-web-app
+   ```
+
+   **Windows CMD用户请使用：**
+
+   ```cmd
+   docker run -d -p 80:80 -p 443:443 -v %cd%/ssl:/etc/ssl/certs:ro --env-file .env --name localsent-web localsent-web-app
    ```
 
 ## 生产环境配置
@@ -135,10 +181,27 @@ ports:
 
 ## 常用命令
 
+### Docker Compose 命令
+
 - 重新构建：`docker-compose build --no-cache`
 - 查看状态：`docker-compose ps`
-- 进入容器：`docker-compose exec nuxt-app sh`
+- 进入容器：`docker-compose exec localsent-web sh`
+- 查看日志：`docker-compose logs -f localsent-web`
+
+### 直接 Docker 命令
+
+- 查看容器状态：`docker ps`
+- 查看日志：`docker logs localsent-web`
+- 进入容器：`docker exec -it localsent-web sh`
+- 停止容器：`docker stop localsent-web`
+- 删除容器：`docker rm localsent-web`
+- 重新运行：`docker stop localsent-web && docker rm localsent-web` 然后重新运行docker run命令
+
+### 通用命令
+
 - 清理资源：`docker system prune -a`
+- 查看镜像：`docker images`
+- 删除镜像：`docker rmi localsent-web-app`
 
 ## 故障排除
 
@@ -158,11 +221,17 @@ ports:
    - 确保 SSL 证书文件存在且格式正确
    - 检查证书域名是否与 DOMAIN 环境变量匹配
    - 确保证书未过期
-   - 查看 Caddy 日志：`docker-compose logs nuxt-app`
+   - 查看 Caddy 日志：`docker-compose logs localsent-web`
 
 5. **环境变量未生效**
    - 确保 `.env` 文件存在且格式正确
    - 重新构建容器：`docker-compose up -d --build`
+
+6. **方法三（直接Docker）特定问题**
+   - **443端口无法访问**：确保运行命令包含 `-p 443:443`
+   - **SSL证书未找到**：确保包含 `-v $(pwd)/ssl:/etc/ssl/certs:ro`
+   - **环境变量未加载**：确保包含 `--env-file .env`
+   - **容器重启**：先停止并删除容器 `docker stop localsent-web && docker rm localsent-web`
 
 ## 安全注意事项
 

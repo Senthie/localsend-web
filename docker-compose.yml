@@ -1,10 +1,11 @@
 version: '3.8'
 
 services:
-  nuxt-app:
+  localsent-web:
     build:
       context: .
       dockerfile: Containerfile
+    image: localsent-web-app
     ports:
       - "80:80"
       - "443:443"
@@ -18,12 +19,13 @@ services:
       - .env
     restart: unless-stopped
     networks:
-      - nuxt-network
+      - localsent-network
+    container_name: localsent-web
 
 volumes:
   caddy_data:
   caddy_config:
 
 networks:
-  nuxt-network:
+  localsent-network:
     driver: bridge
