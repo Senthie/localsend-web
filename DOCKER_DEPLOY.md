@@ -4,22 +4,61 @@
 
 ### 方法一：使用 Docker Compose（推荐）
 
-1. **构建并启动服务**
+1. **准备SSL证书**
+
+   将你的SSL证书文件放在 `ssl/` 目录下：
+
+   ```
+   ssl/
+   ├── cert.pem    # SSL证书文件
+   └── key.pem     # 私钥文件
+   ```
+
+   如果只是测试，可以生成自签名证书：
+
+   ```bash
+   # Linux/Mac
+   ./generate-test-cert.sh
+   
+   # Windows
+   generate-test-cert.bat
+   ```
+
+2. **配置环境变量**
+
+   ```bash
+   # 复制环境变量模板
+   cp .env.example .env
+   
+   # 编辑环境变量文件
+   nano .env  # 或使用其他编辑器
+   ```
+
+   在 `.env` 文件中设置：
+
+   ```env
+   DOMAIN=your-domain.com
+   CADDY_EMAIL=your-email@example.com
+   NODE_ENV=production
+   ```
+
+2. **构建并启动服务**
 
    ```bash
    docker-compose up -d --build
    ```
 
-2. **访问应用**
-   - 打开浏览器访问：<http://localhost>
+3. **访问应用**
+   - HTTP：<http://localhost> （自动重定向到HTTPS）
+   - HTTPS：<https://localhost> 或 <https://your-domain.com>
 
-3. **查看日志**
+4. **查看日志**
 
    ```bash
    docker-compose logs -f
    ```
 
-4. **停止服务**
+5. **停止服务**
 
    ```bash
    docker-compose down
@@ -55,20 +94,35 @@
 
 ## 生产环境配置
 
-### 自定义域名和HTTPS
+### HTTPS 自定义证书配置
 
-如果你有自己的域名，可以修改 `Containerfile` 中的 Caddyfile：
+本项目使用 Caddy 作为 Web 服务器，支持自定义 SSL 证书：
 
-```dockerfile
-FROM caddy:alpine
-COPY --from=builder /data/.output/public /usr/share/caddy
-COPY <<"EOT" /etc/caddy/Caddyfile
-your-domain.com {
-    file_server
-    root * /usr/share/caddy
-}
-EOT
-```
+1. **自定义证书**：使用你提供的 SSL 证书文件
+2. **HTTP 重定向**：自动将 HTTP 请求重定向到 HTTPS
+3. **安全头**：自动添加安全相关的 HTTP 头
+4. **证书挂载**：证书文件通过 Docker 卷挂载到容器
+
+### 环境变量配置
+
+| 变量名 | 说明 | 示例 |
+|--------|------|------|
+| `DOMAIN` | 你的域名 | `example.com` |
+| `CADDY_EMAIL` | 管理员邮箱 | `admin@example.com` |
+| `NODE_ENV` | 运行环境 | `production` |
+
+### SSL证书要求
+
+1. **证书格式**：PEM 格式的证书文件
+2. **文件位置**：`ssl/cert.pem` 和 `ssl/key.pem`
+3. **域名匹配**：证书域名必须与 DOMAIN 环境变量匹配
+4. **证书有效性**：确保证书未过期
+
+### 部署要求
+
+1. **DNS 解析**：确保域名已正确解析到服务器 IP
+2. **端口开放**：确保服务器防火墙开放 80 和 443 端口
+3. **证书权限**：确保证书文件可读
 
 ### 端口配置
 
@@ -99,3 +153,21 @@ ports:
 3. **应用无法访问**
    - 检查容器状态：`docker-compose ps`
    - 查看日志：`docker-compose logs`
+
+4. **HTTPS 证书问题**
+   - 确保 SSL 证书文件存在且格式正确
+   - 检查证书域名是否与 DOMAIN 环境变量匹配
+   - 确保证书未过期
+   - 查看 Caddy 日志：`docker-compose logs nuxt-app`
+
+5. **环境变量未生效**
+   - 确保 `.env` 文件存在且格式正确
+   - 重新构建容器：`docker-compose up -d --build`
+
+## 安全注意事项
+
+1. **保护 .env 文件**：不要将包含敏感信息的 `.env` 文件提交到版本控制
+2. **定期更新**：定期更新 Docker 镜像和依赖
+3. **监控日志**：定期检查应用和 Caddy 日志
+4. **证书安全**：不要将私钥文件提交到版本控制系统
+5. **证书更新**：定期检查证书有效期并及时更新

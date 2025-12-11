@@ -9,11 +9,13 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      # 持久化Caddy数据（SSL证书等）
+      # 持久化Caddy数据
       - caddy_data:/data
       - caddy_config:/config
-    environment:
-      - NODE_ENV=production
+      # 挂载SSL证书目录
+      - ./ssl:/etc/ssl/certs:ro
+    env_file:
+      - .env
     restart: unless-stopped
     networks:
       - nuxt-network

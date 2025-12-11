@@ -23,3 +23,10 @@ logs
 .env.*
 !.env.example
 .vscode/
+
+# SSL certificates
+ssl/*.pem
+ssl/*.crt
+ssl/*.key
+ssl/*.p12
+!ssl/README.md
