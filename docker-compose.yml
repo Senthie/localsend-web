@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  nuxt-app:
+    build:
+      context: .
+      dockerfile: Containerfile
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # 持久化Caddy数据（SSL证书等）
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+    networks:
+      - nuxt-network
+
+volumes:
+  caddy_data:
+  caddy_config:
+
+networks:
+  nuxt-network:
+    driver: bridge
