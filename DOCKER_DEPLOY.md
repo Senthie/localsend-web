@@ -45,12 +45,15 @@
 3. **构建并启动服务**
 
    ```bash
-   docker-compose up -d --build
+   docker compose up -d --build
    ```
 
 4. **访问应用**
-   - HTTP：<http://localhost> （自动重定向到HTTPS）
-   - HTTPS：<https://localhost> 或 <https://your-domain.com>
+   - 本地访问：<https://localhost> (HTTP自动重定向到HTTPS)
+   - 局域网访问：<https://服务器IP地址> (例如: <https://14.12.0.102>)
+   - 域名访问：<https://your-domain.com> (需要DNS解析)
+   
+   **注意**: LocalSend需要HTTPS环境才能使用Web Crypto API，所有HTTP访问会自动重定向到HTTPS
 
 5. **查看日志**
 
@@ -137,6 +140,47 @@ run-docker.bat
    ```cmd
    docker run -d -p 80:80 -p 443:443 -v %cd%/ssl:/etc/ssl/certs:ro --env-file .env --name localsent-web localsent-web-app
    ```
+
+## 局域网访问配置
+
+### 获取服务器IP地址
+
+要让局域网内的其他设备访问，首先需要获取服务器的IP地址：
+
+```bash
+# 获取服务器IP地址
+hostname -I
+# 或者
+ip addr show | grep inet
+```
+
+### 局域网访问地址
+
+- **HTTPS访问**: `https://服务器IP地址`
+- **示例**: `https://14.12.0.102`
+- **HTTP重定向**: 访问 `http://14.12.0.102` 会自动重定向到HTTPS
+
+**重要**: 
+- LocalSend Web需要HTTPS环境才能正常工作，因为它依赖Web Crypto API进行加密通信
+- 应用支持单页应用(SPA)路由，可以直接访问 `/zh`、`/en` 等语言路径，刷新页面也不会出现404错误
+
+### 客户端设备要求
+
+1. **网络连接**: 确保客户端设备与服务器在同一局域网内
+2. **防火墙**: 确保服务器防火墙允许80和443端口访问
+3. **浏览器**: 使用现代浏览器访问应用
+
+### 测试局域网访问
+
+在其他设备上打开浏览器，访问：
+- `https://你的服务器IP地址` (例如: `https://14.12.0.102`)
+
+**浏览器安全警告处理**:
+由于使用自签名证书，浏览器会显示安全警告。请按以下步骤继续：
+1. 点击"高级"或"Advanced"
+2. 点击"继续访问"或"Proceed to site"
+3. 应用将正常加载并支持Web Crypto API
+4. 可以直接访问语言路径，如 `https://14.12.0.102/zh` 或 `https://14.12.0.102/en`
 
 ## 生产环境配置
 
@@ -232,6 +276,11 @@ ports:
    - **SSL证书未找到**：确保包含 `-v $(pwd)/ssl:/etc/ssl/certs:ro`
    - **环境变量未加载**：确保包含 `--env-file .env`
    - **容器重启**：先停止并删除容器 `docker stop localsent-web && docker rm localsent-web`
+
+7. **SPA路由问题**
+   - **刷新页面404错误**：已通过 `try_files` 配置解决，所有路由都会回退到 `index.html`
+   - **语言路径访问**：支持直接访问 `/zh`、`/en` 等路径，无需担心刷新问题
+   - **静态资源**：CSS、JS、图片等静态文件正常访问不受影响
 
 ## 安全注意事项
 

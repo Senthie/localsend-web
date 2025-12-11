@@ -22,9 +22,8 @@ COPY <<"EOT" /etc/caddy/Caddyfile
     auto_https off
 }
 
-# HTTPS配置 - 使用自定义证书
-{$DOMAIN:localhost}:443 {
-    file_server
+# HTTPS配置 - 所有访问（域名和IP）
+:443 {
     root * /usr/share/caddy
     
     # 使用自定义SSL证书
@@ -33,12 +32,14 @@ COPY <<"EOT" /etc/caddy/Caddyfile
     # 启用压缩
     encode gzip
     
-    # 安全头
+    # SPA路由支持 - 对于不存在的文件，回退到index.html
+    try_files {path} /index.html
+    file_server
+    
+    # 安全头（局域网友好配置）
     header {
-        # 启用HSTS
-        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
-        # 防止点击劫持
-        X-Frame-Options "DENY"
+        # 允许在iframe中显示
+        X-Frame-Options "SAMEORIGIN"
         # 防止MIME类型嗅探
         X-Content-Type-Options "nosniff"
         # XSS保护
@@ -48,8 +49,8 @@ COPY <<"EOT" /etc/caddy/Caddyfile
     }
 }
 
-# HTTP重定向到HTTPS
-{$DOMAIN:localhost}:80 {
+# HTTP配置 - 重定向到HTTPS
+:80 {
     redir https://{host}{uri} permanent
 }
 EOT
