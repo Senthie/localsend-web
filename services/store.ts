@@ -266,3 +266,50 @@ function onFileProgress(progress: FileProgress) {
     store.session.fileState[progress.id].error = progress.error
   }
 }
+
+// 缓存相关功能
+const CACHE_KEY = "localsend_store_cache"
+
+export function saveStoreToCache() {
+  try {
+    const cacheData = {
+      client: store.client,
+      pin: store.pin,
+      timestamp: Date.now(),
+    }
+    localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData))
+    console.log("Store cached successfully")
+  } catch (error) {
+    console.warn("Failed to cache store:", error)
+  }
+}
+
+export function loadStoreFromCache() {
+  try {
+    const cached = localStorage.getItem(CACHE_KEY)
+    if (!cached) return null
+
+    const cacheData = JSON.parse(cached)
+
+    // 检查缓存是否过期（24小时）
+    const isExpired = Date.now() - cacheData.timestamp > 24 * 60 * 60 * 1000
+    if (isExpired) {
+      localStorage.removeItem(CACHE_KEY)
+      return null
+    }
+
+    return cacheData
+  } catch (error) {
+    console.warn("Failed to load cache:", error)
+    return null
+  }
+}
+
+export function clearStoreCache() {
+  try {
+    localStorage.removeItem(CACHE_KEY)
+    console.log("Store cache cleared")
+  } catch (error) {
+    console.warn("Failed to clear cache:", error)
+  }
+}

@@ -83,6 +83,8 @@ import {
   startSendSession,
   store,
   updateAliasState,
+  saveStoreToCache,
+  loadStoreFromCache,
 } from "@/services/store"
 import { getAgentInfoString } from "~/utils/userAgent"
 import { protocolVersion } from "~/services/webrtc"
@@ -153,12 +155,17 @@ const updateAlias = async () => {
   })
 
   updateAliasState(alias)
+
+  // 缓存更新后的store内容
+  saveStoreToCache()
 }
 
 const updatePIN = async () => {
   const pin = prompt(t("index.enterPin"))
   if (typeof pin === "string") {
     store.pin = pin ? pin : null
+    // 缓存更新后的PIN
+    saveStoreToCache()
   }
 }
 
@@ -176,6 +183,9 @@ onMounted(async () => {
     return
   }
 
+  // 尝试从缓存中恢复数据
+  const cachedData = loadStoreFromCache()
+
   await upgradeToEd25519IfSupported()
 
   store.key = await generateKeyPair()
@@ -186,11 +196,16 @@ onMounted(async () => {
   const token = await generateClientTokenFromCurrentTimestamp(store.key)
 
   const info = {
-    alias: generateRandomAlias(),
+    alias: cachedData?.client?.alias || generateRandomAlias(),
     version: protocolVersion,
     deviceModel: getAgentInfoString(userAgent),
     deviceType: PeerDeviceType.web,
     token: token,
+  }
+
+  // 如果有缓存的PIN，恢复它
+  if (cachedData?.pin) {
+    store.pin = cachedData.pin
   }
 
   await setupConnection({
