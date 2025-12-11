@@ -3,16 +3,16 @@ import type {
   ClientInfoWithoutId,
   WsServerMessage,
   WsServerSdpMessage,
-} from "~/services/signaling";
-import { SignalingConnection } from "~/services/signaling";
+} from "~/services/signaling"
+import { SignalingConnection } from "~/services/signaling"
 import {
   defaultStun,
   type FileDto,
   type FileProgress,
   receiveFiles,
   sendFiles,
-} from "~/services/webrtc";
-import { generateClientTokenFromCurrentTimestamp } from "~/services/crypto";
+} from "~/services/webrtc"
+import { generateClientTokenFromCurrentTimestamp } from "~/services/crypto"
 
 export enum SessionState {
   idle = "idle",
@@ -21,13 +21,13 @@ export enum SessionState {
 }
 
 export type FileState = {
-  id: string;
-  name: string;
-  curr: number;
-  total: number;
-  state: "pending" | "skipped" | "sending" | "finished" | "error";
-  error?: string;
-};
+  id: string
+  name: string
+  curr: number
+  total: number
+  state: "pending" | "skipped" | "sending" | "finished" | "error"
+  error?: string
+}
 
 export const store = reactive({
   // Whether the connection loop has started
@@ -60,20 +60,20 @@ export const store = reactive({
     total: 1, // Avoid division by zero
     fileState: {} as Record<string, FileState>,
   },
-});
+})
 
 export async function setupConnection({
   info,
   onPin,
 }: {
-  info: ClientInfoWithoutId;
-  onPin: () => Promise<string | null>;
+  info: ClientInfoWithoutId
+  onPin: () => Promise<string | null>
 }) {
-  store._proposingClient = info;
-  store._onPin = onPin;
+  store._proposingClient = info
+  store._onPin = onPin
   if (!store._loopStarted) {
-    store._loopStarted = true;
-    connectionLoop().then(() => console.log("Connection loop ended"));
+    store._loopStarted = true
+    connectionLoop().then(() => console.log("Connection loop ended"))
   }
 }
 
@@ -86,92 +86,92 @@ async function connectionLoop() {
         onMessage: (data: WsServerMessage) => {
           switch (data.type) {
             case "HELLO":
-              store.client = data.client;
-              store.peers = data.peers;
-              break;
+              store.client = data.client
+              store.peers = data.peers
+              break
             case "JOIN":
-              store.peers = [...store.peers, data.peer];
-              break;
+              store.peers = [...store.peers, data.peer]
+              break
             case "UPDATE":
               store.peers = store.peers.map((p) =>
-                p.id === data.peer.id ? data.peer : p,
-              );
-              break;
+                p.id === data.peer.id ? data.peer : p
+              )
+              break
             case "LEFT":
-              store.peers = store.peers.filter((p) => p.id !== data.peerId);
-              break;
+              store.peers = store.peers.filter((p) => p.id !== data.peerId)
+              break
             case "OFFER":
-              acceptOffer({ offer: data, onPin: store._onPin! });
-              break;
+              acceptOffer({ offer: data, onPin: store._onPin! })
+              break
             case "ANSWER":
-              break;
+              break
           }
         },
         generateNewInfo: async () => {
           const token = await generateClientTokenFromCurrentTimestamp(
-            store.key!,
-          );
-          updateClientTokenState(token);
-          return { ...store._proposingClient!, token };
+            store.key!
+          )
+          updateClientTokenState(token)
+          return { ...store._proposingClient!, token }
         },
         onClose: () => {
-          store.signaling = null;
-          store.client = null;
-          store.peers = [];
+          store.signaling = null
+          store.client = null
+          store.peers = []
         },
-      });
+      })
 
-      await store.signaling.waitUntilClose();
+      await store.signaling.waitUntilClose()
     } catch (error) {
-      console.log("Retrying connection in 5 seconds...");
-      await new Promise((resolve) => setTimeout(resolve, 5000)); // Wait before retrying
+      console.log("Retrying connection in 5 seconds...")
+      await new Promise((resolve) => setTimeout(resolve, 5000)) // Wait before retrying
     }
   }
 }
 
 export function updateAliasState(alias: string) {
-  store._proposingClient!.alias = alias;
-  store.client!.alias = alias;
+  store._proposingClient!.alias = alias
+  store.client!.alias = alias
 }
 
 function updateClientTokenState(token: string) {
-  store._proposingClient!.token = token;
-  store.client!.token = token;
+  store._proposingClient!.token = token
+  store.client!.token = token
 }
 
-const PIN_MAX_TRIES = 3;
+const PIN_MAX_TRIES = 3
 
 export async function startSendSession({
   files,
   targetId,
   onPin,
 }: {
-  files: FileList;
-  targetId: string;
-  onPin: () => Promise<string | null>;
+  files: FileList
+  targetId: string
+  onPin: () => Promise<string | null>
 }): Promise<void> {
-  store.session.state = SessionState.sending;
-  const fileState: Record<string, FileState> = {};
+  store.session.state = SessionState.sending
+  const fileState: Record<string, FileState> = {}
 
-  const fileDtoList = convertFileListToDto(files);
+  const fileDtoList = convertFileListToDto(files)
   const fileMap = fileDtoList.reduce(
     (acc, file) => {
-      acc[file.id] = files[parseInt(file.id)];
+      acc[file.id] = files[parseInt(file.id)]
       fileState[file.id] = {
         id: file.id,
         name: file.fileName,
         curr: 0,
         total: file.size,
         state: "pending",
-      };
-      return acc;
+      }
+      return acc
     },
-    {} as Record<string, File>,
-  );
+    {} as Record<string, File>
+  )
 
-  store.session.fileState = fileState;
-  store.session.curr = 0;
-  store.session.total = fileDtoList.reduce((acc, file) => acc + file.size, 0);
+  store.session.fileState = fileState
+  store.session.curr = 0
+  store.session.total = fileDtoList.reduce((acc, file) => acc + file.size, 0)
 
   try {
     await sendFiles({
@@ -185,20 +185,20 @@ export async function startSendSession({
       onPin: onPin,
       onFilesSkip: (fileIds) => {
         for (const id of fileIds) {
-          store.session.fileState[id].state = "skipped";
+          store.session.fileState[id].state = "skipped"
         }
       },
       onFileProgress: onFileProgress,
-    });
+    })
   } finally {
-    store.session.state = SessionState.idle;
+    store.session.state = SessionState.idle
   }
 }
 
 function convertFileListToDto(files: FileList): FileDto[] {
-  const result: FileDto[] = [];
+  const result: FileDto[] = []
   for (let i = 0; i < files.length; i++) {
-    const file = files[i];
+    const file = files[i]
     result.push({
       id: i.toString(),
       fileName: file.name,
@@ -207,20 +207,20 @@ function convertFileListToDto(files: FileList): FileDto[] {
       metadata: {
         modified: new Date(file.lastModified).toISOString(),
       },
-    });
+    })
   }
 
-  return result;
+  return result
 }
 
 export async function acceptOffer({
   offer,
   onPin,
 }: {
-  offer: WsServerSdpMessage;
-  onPin: () => Promise<string | null>;
+  offer: WsServerSdpMessage
+  onPin: () => Promise<string | null>
 }) {
-  store.session.state = SessionState.receiving;
+  store.session.state = SessionState.receiving
 
   try {
     await receiveFiles({
@@ -232,9 +232,9 @@ export async function acceptOffer({
       onPin: onPin,
       selectFiles: async (files) => {
         // Select all files
-        store.session.curr = 0;
-        store.session.total = files.reduce((acc, file) => acc + file.size, 0);
-        store.session.fileState = {};
+        store.session.curr = 0
+        store.session.total = files.reduce((acc, file) => acc + file.size, 0)
+        store.session.fileState = {}
         for (const file of files) {
           store.session.fileState[file.id] = {
             id: file.id,
@@ -242,27 +242,27 @@ export async function acceptOffer({
             curr: 0,
             total: file.size,
             state: "pending",
-          };
+          }
         }
-        return files.map((file) => file.id);
+        return files.map((file) => file.id)
       },
       onFileProgress: onFileProgress,
-    });
+    })
   } finally {
-    store.session.state = SessionState.idle;
+    store.session.state = SessionState.idle
   }
 }
 
 function onFileProgress(progress: FileProgress) {
-  store.session.fileState[progress.id].curr = progress.curr;
+  store.session.fileState[progress.id].curr = progress.curr
   store.session.curr = Object.values(store.session.fileState).reduce(
     (acc, file) => acc + file.curr,
-    0,
-  );
+    0
+  )
   if (progress.success) {
-    store.session.fileState[progress.id].state = "finished";
+    store.session.fileState[progress.id].state = "finished"
   } else if (progress.error) {
-    store.session.fileState[progress.id].state = "error";
-    store.session.fileState[progress.id].error = progress.error;
+    store.session.fileState[progress.id].state = "error"
+    store.session.fileState[progress.id].error = progress.error
   }
 }

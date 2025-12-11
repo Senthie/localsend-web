@@ -37,7 +37,7 @@ const adjectives = [
   "Strong",
   "Tidy",
   "Wise",
-];
+]
 
 const fruits = [
   "Apple",
@@ -66,10 +66,10 @@ const fruits = [
   "Raspberry",
   "Strawberry",
   "Tomato",
-];
+]
 
 export function generateRandomAlias(): string {
-  const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
-  const fruit = fruits[Math.floor(Math.random() * fruits.length)];
-  return `${adjective} ${fruit}`;
+  const adjective = adjectives[Math.floor(Math.random() * adjectives.length)]
+  const fruit = fruits[Math.floor(Math.random() * fruits.length)]
+  return `${adjective} ${fruit}`
 }

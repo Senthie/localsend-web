@@ -1,11 +1,11 @@
-import { encodeStringToBase64 } from "~/utils/base64";
+import { encodeStringToBase64 } from "~/utils/base64"
 
 export class SignalingConnection {
-  private _socket: WebSocket;
-  private _onAnswer: OnAnswer | null = null;
+  private _socket: WebSocket
+  private _onAnswer: OnAnswer | null = null
 
   private constructor(socket: WebSocket) {
-    this._socket = socket;
+    this._socket = socket
   }
 
   /**
@@ -23,71 +23,71 @@ export class SignalingConnection {
     generateNewInfo,
     onClose,
   }: {
-    url: string;
-    info: ClientInfoWithoutId;
-    onMessage: OnMessageCallback;
-    generateNewInfo: () => Promise<ClientInfoWithoutId>;
-    onClose: () => void;
+    url: string
+    info: ClientInfoWithoutId
+    onMessage: OnMessageCallback
+    generateNewInfo: () => Promise<ClientInfoWithoutId>
+    onClose: () => void
   }): Promise<SignalingConnection> {
-    console.log(`Connecting to ${url}`);
+    console.log(`Connecting to ${url}`)
 
-    const encodedInfo = encodeStringToBase64(JSON.stringify(info));
+    const encodedInfo = encodeStringToBase64(JSON.stringify(info))
     const socket = await new Promise<WebSocket>((resolve, reject) => {
-      const ws = new WebSocket(`${url}?d=${encodedInfo}`);
-      ws.onopen = () => resolve(ws);
-      ws.onerror = (err) => reject(err);
-    });
+      const ws = new WebSocket(`${url}?d=${encodedInfo}`)
+      ws.onopen = () => resolve(ws)
+      ws.onerror = (err) => reject(err)
+    })
 
     // ping every 120 seconds to keep the connection alive
     const pingInterval = setInterval(() => {
-      socket.send("");
-    }, 120 * 1000);
+      socket.send("")
+    }, 120 * 1000)
 
     // every half hour, generate a new fingerprint
     const fingerprintInterval = setInterval(
       async () => {
-        const info = await generateNewInfo();
+        const info = await generateNewInfo()
         socket.send(
           JSON.stringify({
             type: "UPDATE",
             info: info,
-          } as WsClientUpdateMessage),
-        );
+          } as WsClientUpdateMessage)
+        )
       },
-      30 * 60 * 1000,
-    );
+      30 * 60 * 1000
+    )
 
     socket.onclose = () => {
-      console.log("Signaling connection closed");
-      clearInterval(pingInterval);
-      clearInterval(fingerprintInterval);
-      onClose();
-    };
+      console.log("Signaling connection closed")
+      clearInterval(pingInterval)
+      clearInterval(fingerprintInterval)
+      onClose()
+    }
 
-    console.log("Signaling connection established");
+    console.log("Signaling connection established")
 
-    const instance = new SignalingConnection(socket);
+    const instance = new SignalingConnection(socket)
 
     socket.onmessage = (event) => {
-      const message = JSON.parse(event.data) as WsServerMessage;
-      console.log(`WS in: ${event.data}`);
+      const message = JSON.parse(event.data) as WsServerMessage
+      console.log(`WS in: ${event.data}`)
       if (
         message.type === "ANSWER" &&
         instance._onAnswer &&
         message.sessionId === instance._onAnswer.sessionId
       ) {
-        instance._onAnswer.callback(message);
-        instance._onAnswer = null;
+        instance._onAnswer.callback(message)
+        instance._onAnswer = null
       }
-      onMessage(message);
-    };
+      onMessage(message)
+    }
 
-    return instance;
+    return instance
   }
 
   public send(message: WsClientMessage) {
-    console.log(`WS out: ${JSON.stringify(message)}`);
-    this._socket.send(JSON.stringify(message));
+    console.log(`WS out: ${JSON.stringify(message)}`)
+    this._socket.send(JSON.stringify(message))
   }
 
   public async waitForAnswer(sessionId: string): Promise<AnswerMessage> {
@@ -95,33 +95,33 @@ export class SignalingConnection {
       this._onAnswer = {
         sessionId,
         callback: (message) => resolve(message),
-      };
-    });
+      }
+    })
   }
 
   public async waitUntilClose(): Promise<void> {
     return new Promise((resolve) => {
       this._socket.addEventListener("close", () => {
-        resolve();
-      });
-    });
+        resolve()
+      })
+    })
   }
 }
 
 type OnAnswer = {
-  sessionId: string;
-  callback: (message: AnswerMessage) => void;
-};
+  sessionId: string
+  callback: (message: AnswerMessage) => void
+}
 
 export type ClientInfoWithoutId = {
-  alias: string;
-  version: string;
-  deviceModel?: string;
-  deviceType?: PeerDeviceType;
-  token: string;
-};
+  alias: string
+  version: string
+  deviceModel?: string
+  deviceType?: PeerDeviceType
+  token: string
+}
 
-export type ClientInfo = ClientInfoWithoutId & { id: string };
+export type ClientInfo = ClientInfoWithoutId & { id: string }
 
 export enum PeerDeviceType {
   mobile = "mobile",
@@ -138,56 +138,56 @@ export type WsServerMessage =
   | UpdateMessage
   | OfferMessage
   | AnswerMessage
-  | ErrorMessage;
+  | ErrorMessage
 
 export type HelloMessage = {
-  type: "HELLO";
-  client: ClientInfo;
-  peers: ClientInfo[];
-};
+  type: "HELLO"
+  client: ClientInfo
+  peers: ClientInfo[]
+}
 
 export type JoinMessage = {
-  type: "JOIN";
-  peer: ClientInfo;
-};
+  type: "JOIN"
+  peer: ClientInfo
+}
 
 export type UpdateMessage = {
-  type: "UPDATE";
-  peer: ClientInfo;
-};
+  type: "UPDATE"
+  peer: ClientInfo
+}
 
 export type LeftMessage = {
-  type: "LEFT";
-  peerId: string;
-};
+  type: "LEFT"
+  peerId: string
+}
 
 export type WsServerSdpMessage = {
-  peer: ClientInfo;
-  sessionId: string;
-  sdp: string;
-};
+  peer: ClientInfo
+  sessionId: string
+  sdp: string
+}
 
-export type OfferMessage = WsServerSdpMessage & { type: "OFFER" };
+export type OfferMessage = WsServerSdpMessage & { type: "OFFER" }
 
-export type AnswerMessage = WsServerSdpMessage & { type: "ANSWER" };
+export type AnswerMessage = WsServerSdpMessage & { type: "ANSWER" }
 
 export type ErrorMessage = {
-  type: "ERROR";
-  code: number;
-};
+  type: "ERROR"
+  code: number
+}
 
-type OnMessageCallback = (message: WsServerMessage) => void;
+type OnMessageCallback = (message: WsServerMessage) => void
 
-export type WsClientMessage = WsClientUpdateMessage | WsClientSdpMessage;
+export type WsClientMessage = WsClientUpdateMessage | WsClientSdpMessage
 
 export type WsClientUpdateMessage = {
-  type: "UPDATE";
-  info: ClientInfoWithoutId;
-};
+  type: "UPDATE"
+  info: ClientInfoWithoutId
+}
 
 export type WsClientSdpMessage = {
-  type: "OFFER" | "ANSWER";
-  sessionId: string;
-  target: string;
-  sdp: string;
-};
+  type: "OFFER" | "ANSWER"
+  sessionId: string
+  target: string
+  sdp: string
+}

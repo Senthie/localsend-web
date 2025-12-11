@@ -1,53 +1,53 @@
 export function getAgentInfoString(userAgent: string): string {
-  const browser = getBrowser(userAgent);
-  const os = getOS(userAgent);
+  const browser = getBrowser(userAgent)
+  const os = getOS(userAgent)
   if (browser && os) {
-    return `${os} • ${browser}`;
+    return `${os} • ${browser}`
   } else if (browser) {
-    return browser;
+    return browser
   } else if (os) {
-    return os;
+    return os
   } else {
-    return "Unknown";
+    return "Unknown"
   }
 }
 
 export function getBrowser(userAgent: string): string | null {
   if (userAgent.includes("Firefox")) {
-    return "Firefox";
+    return "Firefox"
   } else if (userAgent.includes("Chrome")) {
-    return "Chrome";
+    return "Chrome"
   } else if (userAgent.includes("Safari")) {
-    return "Safari";
+    return "Safari"
   } else if (userAgent.includes("Opera") || userAgent.includes("OPR")) {
-    return "Opera";
+    return "Opera"
   } else if (userAgent.includes("Edg")) {
-    return "Edge";
+    return "Edge"
   } else if (userAgent.includes("MSIE") || userAgent.includes("Trident")) {
-    return "Internet Explorer";
+    return "Internet Explorer"
   } else if (userAgent.includes("insomnia")) {
-    return "Insomnia";
+    return "Insomnia"
   } else {
-    return null;
+    return null
   }
 }
 
 export function getOS(userAgent: string): string | null {
   if (userAgent.includes("Win")) {
-    return "Windows";
+    return "Windows"
   } else if (userAgent.includes("Android")) {
-    return "Android";
+    return "Android"
   } else if (userAgent.includes("Macintosh")) {
-    return "macOS";
+    return "macOS"
   } else if (
     userAgent.includes("iPhone") ||
     userAgent.includes("iPad") ||
     userAgent.includes("iPod")
   ) {
-    return "iOS";
+    return "iOS"
   } else if (userAgent.includes("X11")) {
-    return "Linux";
+    return "Linux"
   } else {
-    return null;
+    return null
   }
 }

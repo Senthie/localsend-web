@@ -77,69 +77,69 @@
 </template>
 
 <script setup lang="ts">
-import { PeerDeviceType } from "@/services/signaling";
+import { PeerDeviceType } from "@/services/signaling"
 import {
   setupConnection,
   startSendSession,
   store,
   updateAliasState,
-} from "@/services/store";
-import { getAgentInfoString } from "~/utils/userAgent";
-import { protocolVersion } from "~/services/webrtc";
-import { generateRandomAlias } from "~/utils/alias";
-import { useFileDialog } from "@vueuse/core";
-import SessionDialog from "~/components/dialog/SessionDialog.vue";
+} from "@/services/store"
+import { getAgentInfoString } from "~/utils/userAgent"
+import { protocolVersion } from "~/services/webrtc"
+import { generateRandomAlias } from "~/utils/alias"
+import { useFileDialog } from "@vueuse/core"
+import SessionDialog from "~/components/dialog/SessionDialog.vue"
 import {
   cryptoKeyToPem,
   generateClientTokenFromCurrentTimestamp,
   generateKeyPair,
   isWebCryptoSupported,
   upgradeToEd25519IfSupported,
-} from "~/services/crypto";
+} from "~/services/crypto"
 
 definePageMeta({
   title: "index.seo.title",
   description: "index.seo.description",
-});
+})
 
-const { t } = useI18n();
+const { t } = useI18n()
 
-const { open: openFileDialog, onChange } = useFileDialog();
+const { open: openFileDialog, onChange } = useFileDialog()
 
 onChange(async (files) => {
-  if (!files) return;
+  if (!files) return
 
-  if (files.length === 0) return;
+  if (files.length === 0) return
 
-  if (!store.signaling) return;
+  if (!store.signaling) return
 
   await startSendSession({
     files,
     targetId: targetId.value,
     onPin: async () => {
-      return prompt(t("index.enterPin"));
+      return prompt(t("index.enterPin"))
     },
-  });
-});
+  })
+})
 
-const minDelayFinished = ref(false);
-const webCryptoSupported = ref(true);
+const minDelayFinished = ref(false)
+const webCryptoSupported = ref(true)
 
-const targetId = ref("");
+const targetId = ref("")
 
 const selectPeer = (id: string) => {
-  targetId.value = id;
-  openFileDialog();
-};
+  targetId.value = id
+  openFileDialog()
+}
 
 const updateAlias = async () => {
-  if (!store.client) return;
+  if (!store.client) return
 
-  const current = store.client;
-  if (!current) return;
+  const current = store.client
+  if (!current) return
 
-  const alias = prompt(t("index.enterAlias"), current.alias);
-  if (!alias || !store.signaling) return;
+  const alias = prompt(t("index.enterAlias"), current.alias)
+  if (!alias || !store.signaling) return
 
   store.signaling.send({
     type: "UPDATE",
@@ -150,40 +150,40 @@ const updateAlias = async () => {
       deviceType: current.deviceType,
       token: current.token,
     },
-  });
+  })
 
-  updateAliasState(alias);
-};
+  updateAliasState(alias)
+}
 
 const updatePIN = async () => {
-  const pin = prompt(t("index.enterPin"));
+  const pin = prompt(t("index.enterPin"))
   if (typeof pin === "string") {
-    store.pin = pin ? pin : null;
+    store.pin = pin ? pin : null
   }
-};
+}
 
 onMounted(async () => {
-  webCryptoSupported.value = isWebCryptoSupported();
+  webCryptoSupported.value = isWebCryptoSupported()
 
   setTimeout(() => {
     // to prevent flickering during initial connection
     // i.e. show blank screen instead of "Connecting..."
-    minDelayFinished.value = true;
-  }, 1000);
+    minDelayFinished.value = true
+  }, 1000)
 
   if (!webCryptoSupported.value) {
-    console.error("Web Crypto API is not supported in this browser.");
-    return;
+    console.error("Web Crypto API is not supported in this browser.")
+    return
   }
 
-  await upgradeToEd25519IfSupported();
+  await upgradeToEd25519IfSupported()
 
-  store.key = await generateKeyPair();
+  store.key = await generateKeyPair()
 
-  console.log(await cryptoKeyToPem(store.key.publicKey));
+  console.log(await cryptoKeyToPem(store.key.publicKey))
 
-  const userAgent = navigator.userAgent;
-  const token = await generateClientTokenFromCurrentTimestamp(store.key);
+  const userAgent = navigator.userAgent
+  const token = await generateClientTokenFromCurrentTimestamp(store.key)
 
   const info = {
     alias: generateRandomAlias(),
@@ -191,15 +191,15 @@ onMounted(async () => {
     deviceModel: getAgentInfoString(userAgent),
     deviceType: PeerDeviceType.web,
     token: token,
-  };
+  }
 
   await setupConnection({
     info,
     onPin: async () => {
-      return prompt(t("index.enterPin"));
+      return prompt(t("index.enterPin"))
     },
-  });
-});
+  })
+})
 </script>
 
 <style>

@@ -1,17 +1,17 @@
 <script setup>
-const route = useRoute();
-const { t } = useI18n();
+const route = useRoute()
+const { t } = useI18n()
 const localeHead = useLocaleHead({
   addDirAttribute: true,
   identifierAttribute: "id",
   addSeoAttributes: true,
-});
+})
 const title = computed(() =>
-  route.meta.title ? t(route.meta.title) : "LocalSend",
-);
+  route.meta.title ? t(route.meta.title) : "LocalSend"
+)
 const description = computed(() =>
-  route.meta.description ? t(route.meta.description) : null,
-);
+  route.meta.description ? t(route.meta.description) : null
+)
 </script>
 
 <template>
